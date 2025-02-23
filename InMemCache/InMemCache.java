@@ -51,7 +51,7 @@ public class InMemCache<K, V> {
         return CompletableFuture.supplyAsync(() -> {
             CacheEntry<V> entry = cache.remove(key);
             return entry != null ? entry.value : null;
-        });
+        },service);
     }
 
     public void evictOldest() {
