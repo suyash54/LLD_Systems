@@ -1,18 +1,25 @@
 package ScheduledExecutorService;
 
+import java.util.Comparator;
+
 public class ScheduledTask implements Comparable<ScheduledTask> {
+
+
     enum TaskType{
         ONE_TIME,
         FIXED_RATE,
         FIXED_DELAY
     }
+
     private final Runnable task;
     private long nextExecutionTime;
     private final long period;
     private final TaskType taskType;
     private volatile boolean cancelled;
 
-    public ScheduledTask(Runnable task, long nextExecutionTime, long period, TaskType taskType){
+
+    public ScheduledTask(Runnable task,long nextExecutionTime,long period,TaskType taskType){
+
         this.task = task;
         this.nextExecutionTime = nextExecutionTime;
         this.period = period;
@@ -21,24 +28,25 @@ public class ScheduledTask implements Comparable<ScheduledTask> {
     }
 
     public Runnable getTask(){
-        return task;
+        return this.task;
     }
     public Long getNextExecutionTime(){
-        return nextExecutionTime;
+        return this.nextExecutionTime;
     }
-    public Long getPeriod(){
-        return period;
+    public long getPeriod(){
+        return this.period;
     }
     public TaskType getTaskType(){
-        return taskType;
+        return this.taskType;
     }
     public boolean isCancelled(){
         return this.cancelled;
     }
     public boolean isPeriodic(){
-        return this.taskType == TaskType.FIXED_DELAY || this.taskType == TaskType.FIXED_RATE;
+        return (this.taskType==TaskType.FIXED_DELAY || this.taskType == TaskType.FIXED_RATE);
     }
-    public int compareTo(ScheduledTask other){
+    @Override
+    public int compareTo(ScheduledTask other) {
         return Long.compare(this.nextExecutionTime,other.nextExecutionTime);
     }
 }

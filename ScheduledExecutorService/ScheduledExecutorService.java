@@ -1,22 +1,22 @@
 package ScheduledExecutorService;
 
 import java.util.PriorityQueue;
-import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class ScheduledExecutorService {
+
+    private final BlockingQueue<ScheduledTask> executionTasks;
     private final PriorityQueue<ScheduledTask> scheduledTasks;
-    private final BlockingDeque<ScheduledTask> executionTasks;
     private final WorkerThread[] workerThreads;
-    private final SchedulerThread schedulerThread;
-    private final Object lock;
-    private volatile  boolean shutdown;
+    private final SchedularThread schedularThread;
+    private volatile boolean shutdown;
 
     public ScheduledExecutorService(int poolSize){
-        this.scheduledTasks = new PriorityQueue<>();
-        this.executionTasks = new LinkedBlockingDeque<>();
-        this.lock = new Object();
+        executionTasks = new LinkedBlockingQueue<>();
+        scheduledTasks = new PriorityQueue<>();
         this.shutdown = false;
 
         this.workerThreads = new WorkerThread[poolSize];
@@ -25,8 +25,8 @@ public class ScheduledExecutorService {
             workerThreads[i].start();
         }
 
-        this.schedulerThread = new SchedulerThread(scheduledTasks,executionTasks,lock);
-        this.schedulerThread.start();
+        this.schedularThread = new SchedularThread(scheduledTasks,executionTasks);
+        this.schedularThread.start();
     }
 
     public void schedule(Runnable task, long delay, TimeUnit time){
@@ -43,12 +43,9 @@ public class ScheduledExecutorService {
                 0,
                 ScheduledTask.TaskType.ONE_TIME
         );
-
-        synchronized (lock){
-            scheduledTasks.offer(scheduledTask);
-            lock.notify();
-        }
+        schedularThread.addTask(scheduledTask);
     }
+
 
     public void scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
         if (shutdown) {
@@ -66,10 +63,7 @@ public class ScheduledExecutorService {
                 ScheduledTask.TaskType.FIXED_RATE
         );
 
-        synchronized (lock) {
-            scheduledTasks.offer(scheduledTask);
-            lock.notify();
-        }
+        schedularThread.addTask(scheduledTask);
     }
 
     public void scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit) {
@@ -88,10 +82,7 @@ public class ScheduledExecutorService {
                 ScheduledTask.TaskType.FIXED_DELAY
         );
 
-        synchronized (lock) {
-            scheduledTasks.offer(scheduledTask);
-            lock.notify();
-        }
+        schedularThread.addTask(scheduledTask);
     }
 
     public void shutdown() {
@@ -102,7 +93,7 @@ public class ScheduledExecutorService {
         shutdown = true;
 
         // Shutdown scheduler thread
-        schedulerThread.shutdown();
+        schedularThread.shutdown();
 
         // Shutdown worker threads
         for (WorkerThread worker : workerThreads) {
@@ -110,24 +101,23 @@ public class ScheduledExecutorService {
         }
     }
 
-    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        long timeoutMillis = unit.toMillis(timeout);
+    public boolean awaitTermination(long timeout,TimeUnit unit) throws InterruptedException {
+        long timeOutInMillis = unit.toMillis(timeout);
         long startTime = System.currentTimeMillis();
 
-        schedulerThread.join(timeoutMillis);
+        schedularThread.join(timeOutInMillis);
 
-        long elapsed = System.currentTimeMillis() - startTime;
-        long remaining = timeoutMillis - elapsed;
+        long elasped = System.currentTimeMillis() - startTime;
+        long remaining = timeOutInMillis - elasped;
 
-        for (WorkerThread worker : workerThreads) {
-            if (remaining <= 0) {
+        for(WorkerThread workerThread: workerThreads){
+            if(remaining <= 0){
                 return false;
             }
-            worker.join(remaining);
-            elapsed = System.currentTimeMillis() - startTime;
-            remaining = timeoutMillis - elapsed;
+            workerThread.join(remaining);
+            elasped = System.currentTimeMillis() - startTime;
+            remaining = timeOutInMillis - elasped;
         }
-
         return true;
     }
 
@@ -172,5 +162,6 @@ public class ScheduledExecutorService {
         executor.awaitTermination(5, TimeUnit.SECONDS);
         System.out.println("Executor shut down complete");
     }
-}
 
+
+}
